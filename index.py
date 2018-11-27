@@ -1,38 +1,36 @@
 import numpy as np
 import cv2
 import sys,time,math
-from scipy.ndimage import gaussian_filter
-video_path = 'tir.mp4'
+
+video_path = 'TESTMANUEL.mp4'
 cv2.ocl.setUseOpenCL(False)
 
 version = cv2.__version__.split('.')[0]
 print("Version de opencv "+str(version))
 # https://www.youtube.com/watch?v=LWh9I9Z9tW4
 #read video file
+# lecture de la video
 cap = cv2.VideoCapture(video_path)
+# nombre de frame => pour aptres voir le temps
 length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-fgbg = cv2.createBackgroundSubtractorMOG2(history=0,detectShadows=0,varThreshold = 300)
-
-frame_width = int(cap.get(3))
-frame_height = int(cap.get(4))
+fgbg = cv2.createBackgroundSubtractorMOG2(history=1000,detectShadows=0,varThreshold = 1000)
+# taille de la fenetre
+frame_width = int(cap.get(3)) #en pixel
+frame_height = int(cap.get(4))#en pixel
 fps = cap.get(cv2.CAP_PROP_FPS)
 t = 0
 
-distanceX=200.0 #(en cm )
-distanceY=150.0 #(en cm )
-pointsCM = []
+distanceX=189.4 #(en cm )
+distanceY=121.0 #(en cm )
 distParPixelX =distanceX / frame_width
 distParPixelY =distanceY / frame_height
-print(distParPixelX)
-print(distParPixelY)
-# frame_width=float(cap.get(cv2.CAP_PROP_FRAME_WIDTH ))
-# frame_height=float(cap.get(cv2.CAP_PROP_FRAME_HEIGHT ))
 font = cv2.FONT_HERSHEY_SIMPLEX
-print(frame_height)
+# print(frame_height)
 
 lower_red = np.array([50 ,10,15])
 upper_red = np.array([255, 255, 255])
 points = []
+pointsCM = []
 vitessesX = []
 vitessesY = []
 vitessesC = []
@@ -42,8 +40,8 @@ nmbrF =0
 while (cap.isOpened):
 
   #if ret is true than no error with cap.isOpened
-  ret, frame = cap.read()
-  if ret==True:
+  ret, frame = cap.read()# lire image par image
+  if ret==True: #verifier si il y a une image
     nmbrF+=1
     fgmask = fgbg.apply(frame)
     # hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -51,18 +49,19 @@ while (cap.isOpened):
     # res = cv2.bitwise_and(frame,fr380ame, mask= mask)
     (im2, contours, hierarchy) = cv2.findContours(fgmask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
     # cv2.drawContours(frame, contours, -1, (255,255,0), 3)
+
+    # ajout d un cadrillage (opetionnel)
     # for n in range(0,frame_width,int(frame_width/10)):
     #   cv2.line(frame,(int(n),0),(int(n),int(frame_height)),(255,0,0),2)
     # for n in range(0,frame_height,int(frame_height/10)):
     #   cv2.line(frame,(0,int(n)),(int(frame_width),int(n)),(250,0,0),2)
-
     for c in contours:
-      if cv2.contourArea(c) < 5 or cv2.contourArea(c) > 380:
+      if cv2.contourArea(c) < 250:
         continue
       #get bounding box from countour
       (x, y, w, h) = cv2.boundingRect(c)
 
-      #draw bounding box
+      #draw bounding box (j applique la couleur verte)
       cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
       cv2.putText(frame,str(cv2.contourArea(c)),(x,y), font, 0.3,(255,255,255),1,cv2.LINE_AA)
       # cv2.imshow('rgb',frame)
@@ -97,10 +96,8 @@ while (cap.isOpened):
         # print(vitesseX)
       except Exception as e:
         pass
-      cv2.imshow('res',frame)
-      time.sleep(1)
 
-
+      cv2.imshow('res',fgmask)
       out.write(frame)
 
       if nmbrF>=(length-1):
@@ -114,9 +111,6 @@ while (cap.isOpened):
         y = np.array(y)
         z = np.polyfit(x, y, 2)
         p = np.poly1d(z)
-        pv = np.polyder(p)
-
-
 
         for i in range(0,frame_width,2):
           cv2.circle(frame,(int(i),int(p(i))), 2, (255,255,255), 2)
@@ -131,11 +125,24 @@ while (cap.isOpened):
         y = np.array(y)
         z = np.polyfit(x, y, 3)
         p = np.poly1d(z)
-        pv = np.polyder(p)
         print("y="+str(z[0])+"x³+"+str(z[1])+"x²+"+str(z[2])+"x"+str(z[3]))
         # print("v="+str(z[0]*3)+"x²+"+str(z[1]*2)+"x+"+str(z[2]))
 
-        print("vitesse x en fonction du temps")
+        print("distance en fonction du temps")
+        x = []
+        y = []
+        for pos in pointsCM:
+          x.append(int(pos[2]))
+          y.append(int(pos[1]))
+        x = np.array(x)
+        y = np.array(y)
+        z = np.polyfit(x, y, 3)
+        p = np.poly1d(z)
+        pv = np.polyder(p)
+        print("distance x en fonction du temps")
+        print("y="+str(z[0])+"x³+"+str(z[1])+"x²+"+str(z[2])+"x"+str(z[3]))
+        print("y'="+str(z[0]*3)+"x²+"+str(z[1]*2)+"x+"+str(z[2]))
+
         x = []
         y = []
         for v in vitessesX:
