@@ -1,7 +1,7 @@
 #Import libraries
 import numpy as np
-import cv2
-import sys,time,math
+import sys,time,math,csv
+import cv2,datetime
 
 #Access video file
 video_path = 'OutChamp.MOV'
@@ -16,7 +16,7 @@ cap = cv2.VideoCapture(video_path)
 length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 print(length)
 
-fgbg = cv2.createBackgroundSubtractorMOG2(history=1000,detectShadows=1,varThreshold = 2000)
+fgbg = cv2.createBackgroundSubtractorMOG2(history=100,detectShadows=0,varThreshold = 2000)
 
 """
 Arguments of createBackgroundSubtractorMOG2():
@@ -50,7 +50,7 @@ vitessesC = []
 out = cv2.VideoWriter('trajectory.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
 
 #Main loop
-lastframe = None
+lastframe = 0
 nmbrF =0
 while (cap.isOpened):
   ret, frame = cap.read()#Reading frame by frame
@@ -67,13 +67,13 @@ while (cap.isOpened):
         cv2.line(frame,(0,int(n)),(int(frame_width),int(n)),(250,0,0),2)
     """
     for c in contours:
-      if cv2.contourArea(c) < 300: #Modify with respect to the moving object size
+      if cv2.contourArea(c) < 1100: #Modify with respect to the moving object size
         continue
       #Get bounding box from contour
       (x, y, w, h) = cv2.boundingRect(c)#gets value for box
       #Draw bounding box (in green)
       cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-      # cv2.putText(frame,str(cv2.contourArea(c)),(x,y), font, 0.3,(255,255,255),1,cv2.LINE_AA)
+      cv2.putText(frame,str(cv2.contourArea(c)),(x,y), font, 0.3,(255,255,255),1,cv2.LINE_AA)
       # cv2.imshow('rgb',frame)
       for pos in points: #add red dots for past positions
         cv2.circle(frame,(int(pos[0]),int(pos[1])), 2, (0,0,255), 2)
@@ -81,7 +81,7 @@ while (cap.isOpened):
 
 
       t = nmbrF / fps
-      lastframe = frame
+      lastframe = nmbrF
       pointsCM.append([((x+(w/2.0))*distParPixelX),(distanceY-(y+(h/2.0))),t])
       points.append([(x+(w/2.0)),(y+(h/2.0)),t])
       #Display cm and time
@@ -109,27 +109,23 @@ while (cap.isOpened):
       except Exception as e:
         pass
 
-      cv2.imshow('res',frame)#show black and white video
+      #Give points position in pixels
+      x = []
+      y = []
+      for pos in points:
+        x.append(int(pos[0]))
+        y.append(int(pos[1]))
+      x = np.array(x)
+      y = np.array(y)
+      z = np.polyfit(x, y, 2)
+      p = np.poly1d(z)
+
+      for i in range(0,frame_width,2):
+        cv2.circle(frame,(int(i),int(p(i))), 2, (255,255,255), 2)
+      cv2.imshow('res',frame)
       out.write(frame)
-  print(str(nmbrF/length*100))
-  if nmbrF>=(length-1):
 
-    #Give points position in pixels
-    print("DESSIN point en pixels")
-    x = []
-    y = []
-    for pos in points:
-      x.append(int(pos[0]))
-      y.append(int(pos[1]))
-    x = np.array(x)
-    y = np.array(y)
-    z = np.polyfit(x, y, 2)
-    p = np.poly1d(z)
-
-    for i in range(0,frame_width,2):
-      cv2.circle(frame,(int(i),int(p(i))), 2, (255,255,255), 2)
-
-
+  if nmbrF/length*100>=(95):
     print("DESSIN point en cm")
     x = []
     y = []
@@ -148,16 +144,17 @@ while (cap.isOpened):
     y = []
     for pos in pointsCM:
       x.append(int(pos[2]))
-      y.append(int(pos[1]))
+      y.append(float(pos[1]/100.0))
     x = np.array(x)
     y = np.array(y)
-    z = np.polyfit(x, y, 3)
+    z = np.polyfit(x, y, 2)
     p = np.poly1d(z)
     pv = np.polyder(p)
     print("distance x en fonction du temps")
-    print("y="+str(z[0])+"x³+"+str(z[1])+"x²+"+str(z[2])+"x"+str(z[3]))
-    print("y'="+str(z[0]*3)+"x²+"+str(z[1]*2)+"x+"+str(z[2]))
+    print("y="+str(z[0])+"x²+"+str(z[1])+"x"+str(z[0]))
+    print("v'=|"+str(abs(z[0]*2))+"x+"+str(z[1])+"|")
 
+    print("vitesse x en fonction du temps")
     x = []
     y = []
     for v in vitessesX:
@@ -191,10 +188,66 @@ while (cap.isOpened):
     p = np.poly1d(z)
     print("y="+str(z[0])+"x²+"+str(z[1])+"x+"+str(z[2]))
 
-    cv2.imshow('res',frame)
-    time.sleep(10)
     break
   if cv2.waitKey(1) & 0xFF == ord("q"):
       break
 cap.release()
 cv2.destroyAllWindows()
+
+
+
+
+cap = cv2.VideoCapture(video_path)
+cap.set(cv2.CAP_PROP_FRAME_COUNT, lastframe)
+
+# cap.set(cv2.CAP_PROP_POS_MSEC,nmbrF)      # Go to the 1 sec. position
+ret,frame = cap.read()                   # Retrieves the frame at the specified second
+x = []
+y = []
+correctedX = []
+correctedY = []
+for pos in points:
+  x.append(int(pos[0]))
+  y.append(int(pos[1]))
+x = np.array(x)
+y = np.array(y)
+z = np.polyfit(x, y, 2)
+p = np.poly1d(z)
+
+for i in range(0,frame_width,2):
+  cv2.circle(frame,(int(i),int(p(i))), 2, (255,255,255), 1)
+
+for pos in points: #add red dots for past positions
+  te = abs(int(pos[1]) - int(p(pos[0]))) / int(p(pos[0])) * 100
+  if(te > 50):
+    cv2.circle(frame,(int(pos[0]),int(pos[1])), 2, (0,0,255), 2)
+  else:
+    correctedX.append(int(pos[0]))
+    correctedY.append(int(pos[1]))
+    cv2.circle(frame,(int(pos[0]),int(pos[1])), 2, (0,255,0), 2)
+
+  cv2.putText(frame,str(round(pos[0]*distParPixelX,0))+"cm et "+str(round(distanceY-(pos[1]*distParPixelY),0)),(int(pos[0]+10),int(pos[1])), font, 0.3,(255,255,255),1,cv2.LINE_AA)
+
+x = np.array(correctedX)
+y = np.array(correctedY)
+z = np.polyfit(x, y, 2)
+p = np.poly1d(z)
+for i in range(0,frame_width,2):
+  cv2.circle(frame,(int(i),int(p(i))), 2, (0,255,0), 2)
+
+
+cv2.imwrite("result.jpg", frame)          # Saves the frame as an image
+cv2.imshow("Frame Name",frame)           # Displays the frame on screen
+cv2.waitKey()
+
+
+
+data = [["x (m) ","y (m)","t (s)", "x (pixel)","y (pixel)","taux d'erreur"]]
+for i in range(len(pointsCM)-1):
+  data.append([(pointsCM[i][0]/100.0),(pointsCM[i][1]/100.0),pointsCM[i][2],points[i][0],points[i][1],(abs(int(points[i][1]) - int(p(points[i][0]))) / int(p(points[i][0])) * 100)])
+now = datetime.datetime.now()
+now = str(now.strftime("%d_%m_%Y-%H:%M"))
+outputfile = open('sortie_'+now+'.csv', 'w')
+with outputfile:
+   writer = csv.writer(outputfile)
+   writer.writerows(data)
