@@ -2,12 +2,66 @@
 import numpy as np
 import sys,time,math,csv
 import cv2,datetime
-
+from tkinter import *
+from tkinter import filedialog as fd
 #Access video file
-video_path = 'OutChamp.MOV'
+print('''
+  _______ _____ _____     ____  ____  _      _  ____  _    _ ______
+ |__   __|_   _|  __ \   / __ \|  _ \| |    (_)/ __ \| |  | |  ____|
+    | |    | | | |__) | | |  | | |_) | |     _| |  | | |  | | |__
+    | |    | | |  _  /  | |  | |  _ <| |    | | |  | | |  | |  __|
+    | |   _| |_| | \ \  | |__| | |_) | |____| | |__| | |__| | |____
+    |_|  |_____|_|  \_\  \____/|____/|______|_|\___\_\\____/|______|
+
+
+  ''')
+
+
+
+video_path = ''
 cv2.ocl.setUseOpenCL(False)
 version = cv2.__version__.split('.')[0]
 print("Version de opencv "+str(version))
+
+print("---------Récupération information------------- ")
+with open('lastusedinputs.csv', newline='') as csvfile:
+  spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+  for row in spamreader:
+  print(', '.join(row))
+
+print("--------- Démarrage questionnement utilisateur ----------")
+LARGE_FONT= ("Verdana", 12)
+NORM_FONT = ("Helvetica", 10)
+SMALL_FONT = ("Helvetica", 8)
+def popupmsg(msg):
+  popup = Tk()
+  popup.wm_title("!")
+  label = Label(popup, text=msg, font=NORM_FONT)
+  label.pack(side="top", fill="x", pady=10)
+  B1 = Button(popup, text="Okay doki", command = popup.destroy)
+  B1.pack()
+  popup.mainloop()
+
+def selectVideo():
+  global window, video_path
+  window.filename = fd.askopenfilename()
+  video_path = window.filename
+  popupmsg("vidéo sélectionné : "+video_path)
+
+window = Tk()
+window.geometry("300x400")
+b = Button(window, text="Select. VIDEO", command=selectVideo)
+b.pack()
+l = Label(window, text="distance x (cm avec virg)",font=NORM_FONT)
+l.pack()
+inputX = Entry(window, bd =5)
+inputX.pack()
+l = Label(window, text="distance y (cm avec virg)",font=NORM_FONT)
+l.pack()
+inputY = Entry(window, bd =5)
+inputY.pack()
+
+window.mainloop()
 
 # Read video file
 cap = cv2.VideoCapture(video_path)
