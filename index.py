@@ -1,9 +1,11 @@
 #Import libraries
 import numpy as np
-import sys,time,math,csv
+import sys,time,math,csv,sys
 import cv2,datetime
+"""
 from tkinter import *
 from tkinter import filedialog as fd
+"""
 #Access video file
 print('''
   _______ _____ _____     ____  ____  _      _  ____  _    _ ______
@@ -13,23 +15,19 @@ print('''
     | |   _| |_| | \ \  | |__| | |_) | |____| | |__| | |__| | |____
     |_|  |_____|_|  \_\  \____/|____/|______|_|\___\_\\____/|______|
 
-
   ''')
 
 
 
-video_path = ''
+video_path = 'InChamp.MOV'
+distanceX=233.7
+distanceY=123.0
 cv2.ocl.setUseOpenCL(False)
 version = cv2.__version__.split('.')[0]
 print("Version de opencv "+str(version))
-
-print("---------Récupération information------------- ")
-with open('lastusedinputs.csv', newline='') as csvfile:
-  spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-  for row in spamreader:
-  print(', '.join(row))
-
-print("--------- Démarrage questionnement utilisateur ----------")
+"""
+window = Tk()
+window.geometry("500x400")
 LARGE_FONT= ("Verdana", 12)
 NORM_FONT = ("Helvetica", 10)
 SMALL_FONT = ("Helvetica", 8)
@@ -38,20 +36,56 @@ def popupmsg(msg):
   popup.wm_title("!")
   label = Label(popup, text=msg, font=NORM_FONT)
   label.pack(side="top", fill="x", pady=10)
-  B1 = Button(popup, text="Okay doki", command = popup.destroy)
+  B1 = Button(popup, text="OK", command = popup.destroy)
   B1.pack()
   popup.mainloop()
+
+print("---------Récupération information------------- ")
+try:
+  with open('lastusedinputs.csv') as csvfile:
+    inputs = csv.reader(csvfile, delimiter=',')
+    for row in inputs:
+      if(row[0]=="x"):
+        distanceX=float(row[1])
+      elif(row[0]=="y"):
+        distanceY = float(row[1])
+      elif(row[0]=="video_path"):
+        video_path = str(row[1])
+except Exception as e:
+  print(e)
+  print("no configuration file found")
+
+print("--------- Démarrage questionnement utilisateur ----------")
 
 def selectVideo():
   global window, video_path
   window.filename = fd.askopenfilename()
   video_path = window.filename
   popupmsg("vidéo sélectionné : "+video_path)
+def submitData():
+  global inputY,inputX,video_path,distanceX,distanceY,window
+  if(len(str(inputY.get())) < 1 or len(str(inputX.get())) < 1 or len(video_path)<2):
+    popupmsg("Veuillez entrer toutes les valeurs SVP")
+  else:
+    distanceX = float(inputX.get())
+    distanceY = float(inputY.get())
+    data = [
+    ["x",distanceX],
+    ["y",distanceY],
+    ["video_path",video_path]
+    ]
+    outputfile = open('lastusedinputs.csv', 'w')
+    with outputfile:
+       writer = csv.writer(outputfile)
+       writer.writerows(data)
 
-window = Tk()
-window.geometry("300x400")
+    window.destroy()
+
 b = Button(window, text="Select. VIDEO", command=selectVideo)
 b.pack()
+if(len(video_path)>2):
+  l = Label(window, text="Derniere video utilise: \n "+video_path,font=NORM_FONT)
+  l.pack()
 l = Label(window, text="distance x (cm avec virg)",font=NORM_FONT)
 l.pack()
 inputX = Entry(window, bd =5)
@@ -60,8 +94,25 @@ l = Label(window, text="distance y (cm avec virg)",font=NORM_FONT)
 l.pack()
 inputY = Entry(window, bd =5)
 inputY.pack()
+submit = Button(window, text="OK", command=submitData)
+submit.pack()
 
+if(len(str(distanceX))>1):
+  inputX.insert(END, distanceX)
+  inputY.insert(END, distanceY)
 window.mainloop()
+"""
+"""
+get data of user input
+"""
+
+print(str(distanceX))
+print(str(distanceY))
+
+"""
+end  user input
+
+"""
 
 # Read video file
 cap = cv2.VideoCapture(video_path)
@@ -86,8 +137,7 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 t = 0
 
 #Calibration of X and Y axis (in centimeters)
-distanceX=233.7
-distanceY=123.0
+
 distParPixelX =distanceX / frame_width
 distParPixelY =distanceY / frame_height
 
