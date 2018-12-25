@@ -2,10 +2,8 @@
 import numpy as np
 import sys,time,math,csv,sys
 import cv2,datetime
-"""
 from tkinter import *
 from tkinter import filedialog as fd
-"""
 #Access video file
 print('''
   _______ _____ _____     ____  ____  _      _  ____  _    _ ______
@@ -19,13 +17,12 @@ print('''
 
 
 
-video_path = 'InChamp.MOV'
+video_path = ''
 distanceX=233.7
 distanceY=123.0
 cv2.ocl.setUseOpenCL(False)
 version = cv2.__version__.split('.')[0]
 print("Version de opencv "+str(version))
-"""
 window = Tk()
 window.geometry("500x400")
 LARGE_FONT= ("Verdana", 12)
@@ -102,7 +99,6 @@ if(len(str(distanceX))>1):
   inputY.insert(END, distanceY)
 window.mainloop()
 """
-"""
 get data of user input
 """
 
@@ -135,7 +131,6 @@ frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
 fps = cap.get(cv2.CAP_PROP_FPS)
 t = 0
-
 #Calibration of X and Y axis (in centimeters)
 
 distParPixelX =distanceX / frame_width
